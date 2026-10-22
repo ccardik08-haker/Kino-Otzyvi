@@ -8,17 +8,25 @@
 <body>
 <header>
     <div class="header-content">
-        <a href="/" class="logo">🎬 КиноРейтинг</a>
+        <span class="logo">🎬 КиноРейтинг</span>
         <nav>
+            <a href="/">Главная</a>
             <a href="/leaderboard">Рейтинг</a>
             @auth
+            
                 @if(in_array(auth()->user()->role->name, ['Модератор', 'Администратор']))
                     <a href="/moderator">Добавить фильм</a>
+                    <a href="/my-movies">Мои фильмы</a>
                 @endif
                 @if(auth()->user()->role->name === 'Администратор')
                     <a href="/admin">Админка</a>
                 @endif
-                <span class="user-info">{{ auth()->user()->login }} (⭐{{ auth()->user()->score }})</span>
+                <span class="user-info">
+                {{ auth()->user()->login }} 
+                @if(auth()->user()->role->name !== 'Администратор')
+                    (⭐{{ auth()->user()->score }})
+                @endif
+                </span>
                 <form method="POST" action="/logout" style="display:inline">
                     @csrf
                     <button type="submit" class="btn-logout">Выйти</button>

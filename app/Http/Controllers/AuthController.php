@@ -16,22 +16,23 @@ class AuthController extends Controller
     }
 
     public function register(Request $request)
-    {
-        $data = $request->validate([
-            'login' => 'required|string|min:3|max:50|unique:users,login',
-            'password' => 'required|string|min:4|confirmed',
-        ]);
+{
+    $data = $request->validate([
+        'login' => 'required|string|min:3|max:50|unique:users,login',
+        'password' => 'required|string|min:4|confirmed',
+        'role' => 'required|string|in:Пользователь,Модератор',
+    ]);
 
-        $role = Role::where('name', 'Пользователь')->first();
+    $role = Role::where('name', $data['role'])->first();
 
-        User::create([
-            'login' => $data['login'],
-            'password' => Hash::make($data['password']),
-            'role_id' => $role->id,
-        ]);
+    User::create([
+        'login' => $data['login'],
+        'password' => Hash::make($data['password']),
+        'role_id' => $role->id,
+    ]);
 
-        return redirect('/login')->with('ok', 'Регистрация успешна.');
-    }
+    return redirect('/login')->with('ok', 'Регистрация успешна.');
+}
 
     public function showLogin()
     {

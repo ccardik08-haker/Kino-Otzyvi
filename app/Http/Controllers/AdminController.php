@@ -29,11 +29,17 @@ class AdminController extends Controller
     }
 
     public function changeScore(Request $request, $id)
-    {
-        $user = User::findOrFail($id);
-        $user->increment('score', $request->amount);
-        return back()->with('ok', 'Рейтинг обновлен.');
+{
+    $user = User::findOrFail($id);
+    
+    // Запрет на изменение очков администратору
+    if ($user->role->name === 'Администратор') {
+        return back()->withErrors(['msg' => 'Нельзя изменять очки Администратору.']);
     }
+
+    $user->increment('score', $request->amount);
+    return back()->with('ok', 'Рейтинг обновлен.');
+}
 
     public function changeRole(Request $request, $id)
     {

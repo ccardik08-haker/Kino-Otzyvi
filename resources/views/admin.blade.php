@@ -29,11 +29,14 @@
                     </form>
                 @endif
                 
-                <form method="POST" action="/admin/user/{{ $u->id }}/score" style="display:inline">
-                    @csrf
-                    <input type="number" name="amount" placeholder="+/-" style="width: 50px;">
-                    <button type="submit" class="btn-small">Очки</button>
-                </form>
+                @if($u->role->name !== 'Администратор')
+                    <form method="POST" action="/admin/user/{{ $u->id }}/score" style="display:inline">
+                        @csrf
+                        <input type="number" name="amount" placeholder="+/-" style="width: 50px;">
+                        <button type="submit" class="btn-small">Очки</button>
+                    </form>
+                @endif
+
 
                 <form method="POST" action="/admin/user/{{ $u->id }}/role" style="display:inline">
                     @csrf

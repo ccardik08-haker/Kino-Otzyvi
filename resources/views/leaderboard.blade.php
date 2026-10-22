@@ -15,15 +15,21 @@
         @foreach($users as $index => $u)
             <tr>
                 <td>
-                    @if($index == 0) 🥇
-                    @elseif($index == 1) 🥈
-                    @elseif($index == 2) 🥉
+                    @if($index == 0) 1
+                    @elseif($index == 1) 2
+                    @elseif($index == 2) 3
                     @else {{ $index + 1 }}
                     @endif
                 </td>
                 <td>{{ $u->login }}</td>
                 <td>{{ $u->role->name }}</td>
-                <td><strong>{{ $u->score }}</strong></td>
+                <td>
+                    @if($u->role->name === 'Администратор')
+                        <span style="color: #666; font-style: italic;">—</span>
+                    @else
+                        <strong>{{ $u->score }}</strong>
+                    @endif
+                </td>
             </tr>
         @endforeach
     </tbody>

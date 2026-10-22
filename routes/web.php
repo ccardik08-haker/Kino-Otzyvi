@@ -21,6 +21,9 @@ Route::post('/logout', [AuthController::class, 'logout']);
 Route::middleware(['auth', 'role:Модератор,Администратор'])->group(function () {
     Route::get('/moderator', [MovieController::class, 'create'])->name('moderator');
     Route::post('/moderator', [MovieController::class, 'store']);
+    Route::get('/my-movies', [MovieController::class, 'myMovies'])->name('my-movies');
+    Route::get('/my-movies/{id}/edit', [MovieController::class, 'edit'])->name('movie.edit');
+    Route::post('/my-movies/{id}/update', [MovieController::class, 'update'])->name('movie.update');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -32,4 +35,5 @@ Route::middleware(['auth', 'role:Администратор'])->group(function (
     Route::post('/admin/user/{id}/ban', [AdminController::class, 'toggleBan']);
     Route::post('/admin/user/{id}/score', [AdminController::class, 'changeScore']);
     Route::post('/admin/user/{id}/role', [AdminController::class, 'changeRole']);
+    
 });
