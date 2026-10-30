@@ -14,7 +14,7 @@
             <a href="/leaderboard">Рейтинг</a>
             @auth
             
-                @if(in_array(auth()->user()->role->name, ['Модератор', 'Администратор']))
+                @if(auth()->user()->role->name === 'Модератор')
                     <a href="/moderator">Добавить фильм</a>
                     <a href="/my-movies">Мои фильмы</a>
                 @endif

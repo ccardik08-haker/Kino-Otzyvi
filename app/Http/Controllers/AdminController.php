@@ -12,7 +12,7 @@ class AdminController extends Controller
     public function index()
     {
         $users = User::with('role')->get();
-        $movies = Movie::with(['moderator', 'category'])->get();
+        $movies = Movie::with(['moderator', 'category'])->latest()->get(); // <- добавили выборку фильмов
         $roles = Role::all();
         return view('admin', compact('users', 'movies', 'roles'));
     }
