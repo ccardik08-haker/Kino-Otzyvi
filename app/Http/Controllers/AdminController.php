@@ -6,6 +6,7 @@ use App\Models\Movie;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 
 class AdminController extends Controller
 {
@@ -47,5 +48,21 @@ class AdminController extends Controller
         $user->role_id = $request->role_id;
         $user->save();
         return back()->with('ok', 'Роль изменена.');
+    }
+    public function deleteComment(
+        int $movieId,
+        int $reviewId
+    ): RedirectResponse {
+        $movie = Movie::findOrFail($movieId);
+
+        $review = $movie->reviews()->findOrFail($reviewId);
+
+        $review->update([
+            'comment' => null,
+        ]);
+
+        return redirect()
+            ->route('movie.edit', $movie->id)
+            ->with('ok', 'Комментарий удалён.');
     }
 }

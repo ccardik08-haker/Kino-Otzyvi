@@ -90,7 +90,7 @@ class MovieController extends Controller
 
     public function edit($id)
     {
-        $movie = Movie::findOrFail($id);
+        $movie = Movie::with('reviews.user')->findOrFail($id);
         
         if ($movie->moderator_id !== auth()->id() && auth()->user()->role->name !== 'Администратор') {
             abort(403, 'Вы можете редактировать только свои фильмы.');

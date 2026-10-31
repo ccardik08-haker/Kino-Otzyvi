@@ -35,5 +35,5 @@ Route::middleware(['auth', 'role:Администратор'])->group(function (
     Route::post('/admin/user/{id}/ban', [AdminController::class, 'toggleBan']);
     Route::post('/admin/user/{id}/score', [AdminController::class, 'changeScore']);
     Route::post('/admin/user/{id}/role', [AdminController::class, 'changeRole']);
-    
+    Route::delete('/admin/movie/{movieId}/comment/{reviewId}',[AdminController::class, 'deleteComment'])->whereNumber(['movieId', 'reviewId'])->name('admin.comment.delete');
 });
