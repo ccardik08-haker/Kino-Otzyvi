@@ -1,58 +1,227 @@
 @include('components.header')
 
-<div class="movie-page">
-    <h1>{{ $movie->title }} ({{ $movie->year }})</h1>
-    
-    @if($movie->poster_url)
-        <div style="text-align: center; margin: 20px 0;">
-            <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" style="max-width: 300px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+@php
+    $reviewCount = $movie->reviews->count();
+
+    $average = $reviewCount
+        ? round($movie->reviews->avg('rating'), 1)
+        : null;
+
+    $user = auth()->user();
+
+    $isAuthor = $user
+        && (int) $user->id === (int) $movie->moderator_id;
+
+    $userReview = $user
+        ? $movie->reviews->firstWhere('user_id', $user->id)
+        : null;
+
+    $canRate = $user
+        && !$user->is_banned
+        && !$isAuthor
+        && !$userReview;
+
+    $trailer = $movie->trailer_media;
+
+    $ratingClass = $average === null
+        ? 'is-empty'
+        : ($average >= 7
+            ? 'is-high'
+            : ($average >= 5 ? 'is-medium' : 'is-low'));
+@endphp
+
+<main class="movie-page">
+    @if(session('ok'))
+        <div class="alert alert-success" role="status">
+            {{ session('ok') }}
         </div>
     @endif
 
-    <div style="background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <p class="genre">Жанр: <strong>{{ $movie->category->name }}</strong></p>
-        <p class="author-info">Выложил: <strong>{{ $movie->moderator->login }}</strong></p>
-        <p class="avg-rating">Средняя оценка: ⭐ <strong>{{ $movie->average_rating }}</strong> / 10</p>
-    </div>
+    @if($errors->any())
+        <div class="alert alert-error" role="alert">
+            {{ $errors->first() }}
+        </div>
+    @endif
 
-    <div class="description">
-        <p>{!! nl2br(e($movie->description)) !!}</p>
-    </div>
-
-    @auth
-        @if(!auth()->user()->is_banned && auth()->id() !== $movie->moderator_id)
-            @php $hasReviewed = $movie->reviews->where('user_id', auth()->id())->first(); @endphp
-            @if($hasReviewed)
-                <div class="alert alert-success">Вы уже оценили этот фильм на {{ $hasReviewed->rating }}/10.</div>
+    <div class="movie-detail-layout">
+        <div class="movie-media">
+            @if($movie->poster_url)
+                <img
+                    class="movie-poster"
+                    src="{{ $movie->poster_url }}"
+                    alt="Постер: {{ $movie->title }}"
+                >
             @else
-                <div class="review-form">
-                    <h3>Оценить фильм</h3>
-                    @if($errors->any()) <div class="alert alert-error">{{ $errors->first() }}</div> @endif
-                    <form method="POST" action="/movie/{{ $movie->id }}/review">
-                        @csrf
-                        <label>Оценка:</label>
-                        <select name="rating" required style="width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; margin-bottom: 15px;">
-                            <option value="" disabled selected>Выберите оценку...</option>
-                            @for ($i = 1; $i <= 10; $i++) <option value="{{ $i }}">{{ $i }} / 10</option> @endfor
-                        </select>
-                        <textarea name="comment" placeholder="Ваш отзыв..."></textarea>
-                        <button type="submit" class="btn-submit">Отправить</button>
-                    </form>
+                <div class="movie-poster movie-poster-placeholder">
+                    Постер не добавлен
                 </div>
             @endif
-        @elseif(auth()->id() === $movie->moderator_id)
-            <p style="color: #888; font-style: italic;">Вы автор этого фильма и не можете его оценивать.</p>
-        @endif
-    @endauth
 
-    <div class="reviews-list">
-        <h3>Отзывы ({{ $movie->reviews->count() }})</h3>
-        @foreach($movie->reviews as $review)
-            <div class="review">
-                <strong>{{ $review->user->login }}</strong> поставил {{ $review->rating }}/10
-                <p>{{ $review->comment }}</p>
-            </div>
-        @endforeach
+            @if($trailer)
+                <figure class="movie-trailer">
+                    <div class="trailer-player">
+                        @if($trailer['type'] === 'video')
+                            <video
+                                src="{{ $trailer['url'] }}"
+                                controls
+                                playsinline
+                                preload="metadata"
+                                aria-label="Трейлер: {{ $movie->title }}"
+                            >
+                                Ваш браузер не поддерживает видео.
+                            </video>
+                        @else
+                            <iframe
+                                src="{{ $trailer['url'] }}"
+                                title="Трейлер: {{ $movie->title }}"
+                                loading="lazy"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                referrerpolicy="strict-origin-when-cross-origin"
+                                allowfullscreen
+                            ></iframe>
+                        @endif
+                    </div>
+
+                    <figcaption>Трейлер фильма</figcaption>
+
+                    <a
+                        class="trailer-source"
+                        href="{{ $movie->trailer_url }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        Открыть видео отдельно ↗
+                    </a>
+                </figure>
+            @endif
+        </div>
+
+        <section class="movie-summary" aria-labelledby="movie-title">
+            <h1 id="movie-title">
+                {{ $movie->title }} ({{ $movie->year }})
+            </h1>
+
+            <p class="movie-subtitle">
+                {{ $movie->category->name }}
+            </p>
+
+            <div class="movie-synopsis">{{ $movie->description }}</div>
+
+            <p class="movie-author">
+                Выложил:
+                <strong>{{ $movie->moderator->login }}</strong>
+            </p>
+        </section>
+
+        <aside class="movie-rating" aria-label="Рейтинг фильма">
+            <p class="movie-rating-value {{ $ratingClass }}">
+                {{ $average === null ? '—' : number_format($average, 1, '.', '') }}
+            </p>
+
+            <p class="movie-rating-count">
+                Оценок: {{ $reviewCount }}
+            </p>
+
+            <a class="movie-review-link" href="#movie-reviews">
+                Отзывы: {{ $reviewCount }}
+            </a>
+
+            <form
+                method="POST"
+                action="/movie/{{ $movie->id }}/review"
+                class="movie-rating-form"
+            >
+                @csrf
+
+                <fieldset class="rating-picker" @disabled(!$canRate)>
+                    <legend>Оценить фильм</legend>
+
+                    <div class="rating-scale">
+                        @for($i = 1; $i <= 10; $i++)
+                            <label class="rating-option">
+                                <input
+                                    type="radio"
+                                    name="rating"
+                                    value="{{ $i }}"
+                                    required
+                                    aria-label="Оценка {{ $i }} из 10"
+                                    @checked(
+                                        (string) old('rating', $userReview?->rating)
+                                        === (string) $i
+                                    )
+                                >
+                                <span>{{ $i }}</span>
+                            </label>
+                        @endfor
+                    </div>
+                </fieldset>
+
+                @if($canRate)
+                    <label
+                        class="movie-comment-label"
+                        for="review-comment"
+                    >
+                        Отзыв (необязательно)
+                    </label>
+
+                    <textarea
+                        id="review-comment"
+                        name="comment"
+                        rows="4"
+                        placeholder="Ваше впечатление о фильме"
+                    >{{ old('comment') }}</textarea>
+
+                    <button type="submit" class="btn-submit">
+                        Отправить оценку
+                    </button>
+                @endif
+            </form>
+
+            @guest
+                <p class="movie-rating-note">
+                    <a href="{{ route('login') }}">Войдите</a>,
+                    чтобы оценить фильм.
+                </p>
+            @else
+                @if($user->is_banned)
+                    <p class="movie-rating-note">
+                        Вашему аккаунту запрещено оставлять оценки.
+                    </p>
+                @elseif($isAuthor)
+                    <p class="movie-rating-note">
+                        Вы добавили этот фильм и не можете его оценивать.
+                    </p>
+                @elseif($userReview)
+                    <p class="movie-rating-note">
+                        Ваша оценка:
+                        <strong>{{ $userReview->rating }}/10</strong>.
+                    </p>
+                @endif
+            @endguest
+        </aside>
     </div>
-</div>
+
+    <section
+        class="reviews-list movie-reviews"
+        id="movie-reviews"
+    >
+        <h3>Отзывы ({{ $reviewCount }})</h3>
+
+        @forelse($movie->reviews as $review)
+            <div class="review">
+                <strong>{{ $review->user->login }}</strong>
+                поставил {{ $review->rating }}/10
+
+                @if($review->comment)
+                    <p>{{ $review->comment }}</p>
+                @endif
+            </div>
+        @empty
+            <p class="movie-rating-note">
+                У этого фильма пока нет оценок и отзывов.
+            </p>
+        @endforelse
+    </section>
+</main>
+
 @include('components.footer')

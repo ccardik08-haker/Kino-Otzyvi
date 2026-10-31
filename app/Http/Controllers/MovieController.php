@@ -56,19 +56,14 @@ class MovieController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'year' => 'required|integer|min:1888|max:2100',
-            'description' => 'required|string',
-            'category_id' => 'required|exists:categories,id',
-            'poster_url' => 'nullable|string',
-        ]);
+        $this->validateMovie($request);
 
         $movie = Movie::create([
             'title' => $request->title,
             'year' => $request->year,
             'description' => $request->description,
             'poster_url' => $request->poster_url, 
+            'trailer_url' => $request->trailer_url,
             'category_id' => $request->category_id,
             'moderator_id' => auth()->id(),
         ]);
@@ -113,13 +108,7 @@ class MovieController extends Controller
             abort(403);
         }
 
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'year' => 'required|integer|min:1888|max:2100',
-            'description' => 'required|string',
-            'category_id' => 'required|exists:categories,id',
-            'poster_url' => 'nullable|string',
-        ]);
+        $this->validateMovie($request);
 
         if ($request->filled('poster_url')) {
             $fileName = 'movie_' . $movie->id . '.txt';
@@ -137,9 +126,48 @@ class MovieController extends Controller
             'year' => $request->year,
             'description' => $request->description,
             'poster_url' => $request->poster_url,
+            'trailer_url' => $request->trailer_url,
             'category_id' => $request->category_id,
         ]);
 
         return redirect('/my-movies')->with('ok', 'Фильм обновлен!');
+    }
+    private function validateMovie(Request $request): void
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'year' => 'required|integer|min:1888|max:2100',
+            'description' => 'required|string',
+            'category_id' => 'required|exists:categories,id',
+            'poster_url' => 'nullable|url:http,https|max:255',
+            'trailer_url' => [
+                'bail',
+                'nullable',
+                'string',
+                'url:http,https',
+                'max:2048',
+                function (
+                    string $attribute,
+                    mixed $value,
+                    \Closure $fail
+                ): void {
+                    if (Movie::resolveTrailer($value) === null) {
+                        $fail(
+                            'Укажите ссылку на YouTube, Rutube, VK Видео '
+                            . 'или прямую ссылку на MP4, WebM, OGV.'
+                        );
+                    }
+                },
+            ],
+        ], [
+            'poster_url.url' =>
+                'Ссылка на постер должна начинаться с http:// или https://.',
+            'poster_url.max' =>
+                'Ссылка на постер должна быть не длиннее 255 символов.',
+            'trailer_url.url' =>
+                'Ссылка на трейлер должна начинаться с http:// или https://.',
+            'trailer_url.max' =>
+                'Ссылка на трейлер должна быть не длиннее 2048 символов.',
+        ]);
     }
 }
