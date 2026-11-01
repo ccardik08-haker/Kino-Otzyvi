@@ -7,6 +7,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PeopleController extends Controller
 {
@@ -93,5 +94,39 @@ class PeopleController extends Controller
                 'photo_url.url' => 'Введите корректный URL фотографии.',
             ]
         );
+    }
+    public function destroy(
+        string $type,
+        int $id
+    ): RedirectResponse {
+        abort_unless(
+            auth()->user()?->role?->name === 'Администратор',
+            403,
+            'Удалять записи может только администратор.'
+        );
+
+        $modelClass = PersonCatalog::modelClass($type);
+        $person = $modelClass::findOrFail($id);
+
+        DB::transaction(function () use ($type, $person): void {
+            if ($type === 'actors') {
+                DB::table('actor_movie')
+                    ->where('actor_id', $person->id)
+                    ->delete();
+            } else {
+                DB::table('director_movie')
+                    ->where('director_id', $person->id)
+                    ->delete();
+            }
+
+            $person->delete();
+        });
+
+        return redirect()
+            ->route('people.index', ['type' => $type])
+            ->with(
+                'ok',
+                'Запись удалена из справочника и связанных фильмов.'
+            );
     }
 }

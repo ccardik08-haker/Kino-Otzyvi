@@ -7,6 +7,7 @@ use App\Http\Controllers\MovieController;
 use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PeopleController;
+use App\Http\Controllers\FilmographyController;
 
 Route::get('/', [MovieController::class, 'index'])->name('home');
 Route::get('/category/{id}', [MovieController::class, 'byCategory'])->name('category');
@@ -43,6 +44,8 @@ Route::middleware(['auth', 'role:Модератор,Администратор',
         Route::get('/{type}', [PeopleController::class, 'index'])->where('type', 'actors|directors')->name('index');
         Route::post('/{type}', [PeopleController::class, 'store'])->where('type', 'actors|directors')->name('store');
         Route::get('/{type}/{id}/edit',[PeopleController::class, 'edit'])->where('type', 'actors|directors')->whereNumber('id')->name('edit');
-        Route::put('/{type}/{id}',[PeopleController::class, 'update']
-        )->where('type', 'actors|directors')->whereNumber('id')->name('update');
+        Route::put('/{type}/{id}',[PeopleController::class, 'update'])->where('type', 'actors|directors')->whereNumber('id')->name('update');
+        Route::delete('/{type}/{id}',[PeopleController::class, 'destroy'])->where('type', 'actors|directors')->whereNumber('id')->middleware('role:Администратор')->name('destroy');
 });
+
+Route::get('/filmography/{type}/{id}',[FilmographyController::class, 'show'])->where('type', 'actors|directors|authors')->whereNumber('id')->name('filmography');

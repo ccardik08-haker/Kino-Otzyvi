@@ -11,34 +11,210 @@ use Illuminate\Validation\ValidationException;
 use App\Models\Actor;
 use Illuminate\Support\Facades\DB;
 use App\Models\Director;
+use Illuminate\Database\Eloquent\Builder;
 
 class MovieController extends Controller
 {
     public function index(Request $request)
-    {
-        $query = Movie::with(['category', 'moderator']);
+{
+    $data = $request->validate([
+        'q' => 'nullable|string|max:200',
+        'search_in' => 'nullable|in:all,title,genre,actor,director',
+        'category' => 'nullable|integer|exists:categories,id',
+        'sort' => 'nullable|in:newest,rating_desc,rating_asc',
+    ]);
 
-        if ($request->has('category')) {
-            $query->where('category_id', $request->category);
-        }
+    $searchTerm = preg_replace(
+        '/\s+/u',
+        ' ',
+        trim($data['q'] ?? '')
+    ) ?? '';
 
-        if ($request->has('sort')) {
-            if ($request->sort == 'rating_desc') {
-                $query->withAvg('reviews', 'rating')->orderByRaw('reviews_avg_rating DESC NULLS LAST');
-            } elseif ($request->sort == 'rating_asc') {
-                $query->withAvg('reviews', 'rating')->orderByRaw('reviews_avg_rating ASC NULLS LAST');
-            } elseif ($request->sort == 'newest') {
-                $query->latest();
+    $searchIn = $data['search_in'] ?? 'all';
+    $sort = $data['sort'] ?? 'newest';
+
+    $needle = mb_strtolower($searchTerm, 'UTF-8');
+
+    $pattern = '%' . strtr($needle, [
+        '!' => '!!',
+        '%' => '!%',
+        '_' => '!_',
+    ]) . '%';
+
+    $lowerFunction = 'LOWER';
+
+    if ($searchTerm !== '') {
+        $connection = (new Movie)->getConnection();
+
+        if ($connection->getDriverName() === 'sqlite') {
+            $lowerFunction = 'kino_lower';
+
+            $callback = static function (?string $value): string {
+                return mb_strtolower($value ?? '', 'UTF-8');
+            };
+
+            foreach ([
+                $connection->getPdo(),
+                $connection->getReadPdo(),
+            ] as $pdo) {
+                if (method_exists($pdo, 'createFunction')) {
+                    $pdo->createFunction(
+                        'kino_lower',
+                        $callback,
+                        1
+                    );
+                } else {
+                    $pdo->sqliteCreateFunction(
+                        'kino_lower',
+                        $callback,
+                        1
+                    );
+                }
             }
-        } else {
-            $query->latest();
         }
-
-        $movies = $query->paginate(10);
-        $categories = Category::all();
-
-        return view('index', compact('movies', 'categories'));
     }
+
+    $exactGenreIds = [];
+
+    if (
+        $searchTerm !== ''
+        && in_array($searchIn, ['all', 'genre'], true)
+    ) {
+        $exactGenreIds = Category::whereRaw(
+            $lowerFunction . '(name) = ?',
+            [$needle]
+        )->pluck('id')->all();
+    }
+
+    $actorResults = null;
+    $directorResults = null;
+
+    $searchPeopleEverywhere =
+        $searchIn === 'all'
+        && $searchTerm !== ''
+        && $exactGenreIds === [];
+
+    if ($searchIn === 'actor' || $searchPeopleEverywhere) {
+        $actorResults = Actor::withCount('movies')
+            ->whereRaw(
+                "actors.name_key LIKE ? ESCAPE '!'",
+                [$pattern]
+            )
+            ->orderBy('name')
+            ->orderBy('id')
+            ->paginate(12, ['*'], 'actors_page')
+            ->withQueryString();
+    }
+
+    if ($searchIn === 'director' || $searchPeopleEverywhere) {
+        $directorResults = Director::withCount('movies')
+            ->whereRaw(
+                "directors.name_key LIKE ? ESCAPE '!'",
+                [$pattern]
+            )
+            ->orderBy('name')
+            ->orderBy('id')
+            ->paginate(12, ['*'], 'directors_page')
+            ->withQueryString();
+    }
+
+    $query = Movie::with(['category', 'moderator'])
+        ->withAvg('reviews', 'rating')
+        ->withExists('reviews');
+
+    $searchOnlyPeople = in_array(
+        $searchIn,
+        ['actor', 'director'],
+        true
+    );
+
+    if ($searchOnlyPeople) {
+        // При поиске людей карточки фильмов не выдаём.
+        $query->whereRaw('1 = 0');
+    } elseif ($searchTerm !== '') {
+        if ($exactGenreIds !== []) {
+            $query->whereIn('category_id', $exactGenreIds);
+        } else {
+            // Фильмы ищем только по названию и жанру.
+            $query->where(function (Builder $search) use (
+                $searchIn,
+                $pattern,
+                $lowerFunction
+            ): void {
+                if (in_array($searchIn, ['all', 'title'], true)) {
+                    $search->orWhereRaw(
+                        $lowerFunction
+                            . "(movies.title) LIKE ? ESCAPE '!'",
+                        [$pattern]
+                    );
+                }
+
+                if (in_array($searchIn, ['all', 'genre'], true)) {
+                    $search->orWhereHas(
+                        'category',
+                        function (Builder $categoryQuery) use (
+                            $pattern,
+                            $lowerFunction
+                        ): void {
+                            $categoryQuery->whereRaw(
+                                $lowerFunction
+                                    . "(categories.name) LIKE ? ESCAPE '!'",
+                                [$pattern]
+                            );
+                        }
+                    );
+                }
+            });
+        }
+    }
+
+    if (!empty($data['category'])) {
+        $query->where('category_id', $data['category']);
+    }
+
+    if ($sort === 'rating_desc') {
+        $query
+            ->orderByDesc('reviews_exists')
+            ->orderByDesc('reviews_avg_rating');
+    } elseif ($sort === 'rating_asc') {
+        $query
+            ->orderByDesc('reviews_exists')
+            ->orderBy('reviews_avg_rating');
+    } else {
+        $query->orderByDesc('movies.created_at');
+    }
+
+    $movies = $query
+        ->orderByDesc('movies.id')
+        ->paginate(10)
+        ->withQueryString();
+
+    $hasPeople =
+        ($actorResults?->total() ?? 0) > 0
+        || ($directorResults?->total() ?? 0) > 0;
+
+    $showMovieSection = !$searchOnlyPeople
+        && (
+            $searchTerm === ''
+            || $movies->total() > 0
+            || !$hasPeople
+        );
+
+    $categories = Category::orderBy('name')->get();
+
+    return view(
+        'index',
+        compact(
+            'movies',
+            'categories',
+            'searchTerm',
+            'searchIn',
+            'actorResults',
+            'directorResults',
+            'showMovieSection'
+        )
+    );
+}
 
     public function byCategory($id)
     {

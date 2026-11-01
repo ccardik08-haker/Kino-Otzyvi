@@ -110,20 +110,41 @@
             <div class="movie-credits">
                 <p class="movie-author">
                     Выложил:
-                    <strong>{{ $movie->moderator->login }}</strong>
+
+                    <strong>
+                        <a
+                            href="{{ route('filmography', [
+                                'type' => 'authors',
+                                'id' => $movie->moderator_id,
+                            ]) }}"
+                            class="author-filmography-link"
+                            title="Все фильмы этого автора"
+                        >
+                            {{ $movie->moderator->login }}
+                        </a>
+                    </strong>
                 </p>
 
                 @if($movie->directorMembers->isNotEmpty())
-                    <p class="movie-directors">
-                        {{ $movie->directorMembers->count() === 1
-                            ? 'Режиссёр:'
-                            : 'Режиссёры:' }}
+    <p class="movie-directors">
+        {{ $movie->directorMembers->count() === 1
+            ? 'Режиссёр:'
+            : 'Режиссёры:' }}
 
-                        <strong>
-                            {{ $movie->directorMembers->pluck('name')->implode(', ') }}
-                        </strong>
-                    </p>
-                @endif
+        <strong>
+            @foreach($movie->directorMembers as $director)
+                <a
+                    href="{{ route('filmography', [
+                        'type' => 'directors',
+                        'id' => $director->id,
+                    ]) }}"
+                    class="director-filmography-link"
+                    title="Посмотреть фильмографию"
+                >{{ $director->name }}</a>@if(!$loop->last), @endif
+            @endforeach
+        </strong>
+    </p>
+@endif
 
             </div>
         </section>
@@ -223,23 +244,41 @@
         <ul>
             @foreach($movie->castMembers as $actor)
                 <li class="movie-cast-person">
-                    @if($actor->photo_url)
-                        <img
-                            class="movie-actor-photo"
-                            src="{{ $actor->photo_url }}"
-                            alt="{{ $actor->name }}"
-                            loading="lazy"
-                        >
-                    @else
+                    <a
+                        href="{{ route('filmography', [
+                            'type' => 'actors',
+                            'id' => $actor->id,
+                        ]) }}"
+                        class="person-filmography-link"
+                        aria-label="Все фильмы: {{ $actor->name }}"
+                    >
+                        @if($actor->photo_url)
+                            <img
+                                class="movie-actor-photo"
+                                src="{{ $actor->photo_url }}"
+                                alt=""
+                                loading="lazy"
+                            >
+                        @else
+                            <span
+                                class="movie-actor-placeholder"
+                                aria-hidden="true"
+                            >
+                                {{ mb_substr($actor->name, 0, 1) }}
+                            </span>
+                        @endif
+
+                        <span class="person-filmography-name">
+                            {{ $actor->name }}
+                        </span>
+
                         <span
-                            class="movie-actor-placeholder"
+                            class="person-filmography-arrow"
                             aria-hidden="true"
                         >
-                            {{ mb_substr($actor->name, 0, 1) }}
+                            →
                         </span>
-                    @endif
-
-                    <span>{{ $actor->name }}</span>
+                    </a>
                 </li>
             @endforeach
         </ul>

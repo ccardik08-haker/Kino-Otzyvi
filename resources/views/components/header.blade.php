@@ -50,6 +50,9 @@
                 <a href="/register">Регистрация</a>
             @endauth
         </nav>
+        
+
+    
     </div>
 </header>
 <div class="container">

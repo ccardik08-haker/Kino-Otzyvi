@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Actor extends Model
 {
@@ -130,5 +131,14 @@ class Actor extends Model
 
             throw $exception;
         }
+    }
+    public function movies(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Movie::class,
+            'actor_movie',
+            'actor_id',
+            'movie_id'
+        );
     }
 }

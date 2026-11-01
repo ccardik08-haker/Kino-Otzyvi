@@ -127,15 +127,38 @@
 
                     <strong>{{ $item->name }}</strong>
 
-                    <a
-                        href="{{ route('people.edit', [
-                            'type' => $type,
-                            'id' => $item->id,
-                        ]) }}"
-                        class="btn-small"
-                    >
-                        Редактировать
-                    </a>
+                    <div class="people-item-actions">
+                        <a
+                            href="{{ route('people.edit', [
+                                'type' => $type,
+                                'id' => $item->id,
+                            ]) }}"
+                            class="btn-small"
+                        >
+                            Редактировать
+                        </a>
+
+                        @if(auth()->user()->role->name === 'Администратор')
+                            <form
+                                method="POST"
+                                action="{{ route('people.destroy', [
+                                    'type' => $type,
+                                    'id' => $item->id,
+                                ]) }}"
+                                onsubmit="return confirm('Удалить запись? Она исчезнет из всех связанных фильмов.');"
+                            >
+                                @csrf
+                                @method('DELETE')
+
+                                <button
+                                    type="submit"
+                                    class="btn-small people-delete-button"
+                                >
+                                    Удалить
+                                </button>
+                            </form>
+                        @endif
+                    </div>
                 </article>
             @empty
                 <p>Записей пока нет.</p>
