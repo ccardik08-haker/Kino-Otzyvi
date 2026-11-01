@@ -107,10 +107,25 @@
 
             <div class="movie-synopsis">{{ $movie->description }}</div>
 
-            <p class="movie-author">
-                Выложил:
-                <strong>{{ $movie->moderator->login }}</strong>
-            </p>
+            <div class="movie-credits">
+                <p class="movie-author">
+                    Выложил:
+                    <strong>{{ $movie->moderator->login }}</strong>
+                </p>
+
+                @if($movie->directorMembers->isNotEmpty())
+                    <p class="movie-directors">
+                        {{ $movie->directorMembers->count() === 1
+                            ? 'Режиссёр:'
+                            : 'Режиссёры:' }}
+
+                        <strong>
+                            {{ $movie->directorMembers->pluck('name')->implode(', ') }}
+                        </strong>
+                    </p>
+                @endif
+
+            </div>
         </section>
 
         <aside class="movie-rating" aria-label="Рейтинг фильма">
@@ -198,6 +213,38 @@
                     </p>
                 @endif
             @endguest
+            @if($movie->castMembers->isNotEmpty())
+    <section
+        class="movie-cast"
+        aria-labelledby="movie-cast-title"
+    >
+        <h3 id="movie-cast-title">В ролях</h3>
+
+        <ul>
+            @foreach($movie->castMembers as $actor)
+                <li class="movie-cast-person">
+                    @if($actor->photo_url)
+                        <img
+                            class="movie-actor-photo"
+                            src="{{ $actor->photo_url }}"
+                            alt="{{ $actor->name }}"
+                            loading="lazy"
+                        >
+                    @else
+                        <span
+                            class="movie-actor-placeholder"
+                            aria-hidden="true"
+                        >
+                            {{ mb_substr($actor->name, 0, 1) }}
+                        </span>
+                    @endif
+
+                    <span>{{ $actor->name }}</span>
+                </li>
+            @endforeach
+        </ul>
+    </section>
+@endif
         </aside>
     </div>
 

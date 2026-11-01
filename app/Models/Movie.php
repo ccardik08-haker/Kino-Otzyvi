@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Movie extends Model
 {
@@ -16,7 +17,17 @@ class Movie extends Model
         'trailer_url',
         'category_id',
         'moderator_id',
+        'actors',
+        'directors',
+        'people_file_key',
     ];
+    protected function casts(): array
+    {
+        return [
+            'actors' => 'array',
+            'directors' => 'array',
+        ];
+    }
 
     public function category(): BelongsTo
     {
@@ -184,5 +195,23 @@ class Movie extends Model
         }
 
         return null;
+    }
+    public function castMembers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Actor::class,
+            'actor_movie'
+        )
+            ->withPivot('position')
+            ->orderByPivot('position');
+    }
+    public function directorMembers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Director::class,
+            'director_movie'
+        )
+            ->withPivot('position')
+            ->orderByPivot('position');
     }
 }

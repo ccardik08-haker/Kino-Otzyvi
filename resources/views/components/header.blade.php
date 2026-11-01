@@ -14,7 +14,20 @@
             <a href="/">Главная</a>
             <a href="/leaderboard">Рейтинг</a>
             @auth
-            
+
+                @if(in_array(
+                    auth()->user()->role?->name,
+                    ['Модератор', 'Администратор'],
+                    true
+                ))
+                    <a
+                        href="{{ route('people.index', ['type' => 'actors']) }}"
+                        class="header-people-link"
+                    >
+                        Актёры и режиссёры
+                    </a>
+                @endif
+
                 @if(auth()->user()->role->name === 'Модератор')
                     <a href="/moderator">Добавить фильм</a>
                     <a href="/my-movies">Мои фильмы</a>

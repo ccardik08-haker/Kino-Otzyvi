@@ -1,0 +1,40 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('directors', function (Blueprint $table) {
+            $table->id();
+            $table->string('name', 120);
+            $table->string('name_key')->unique();
+            $table->text('photo_url')->nullable();
+            $table->uuid('file_key')->unique();
+            $table->timestamps();
+        });
+
+        Schema::create('director_movie', function (Blueprint $table) {
+            $table->foreignId('director_id')
+                ->constrained('directors')
+                ->cascadeOnDelete();
+
+            $table->foreignId('movie_id')
+                ->constrained('movies')
+                ->cascadeOnDelete();
+
+            $table->unsignedInteger('position')->default(0);
+
+            $table->primary(['director_id', 'movie_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('director_movie');
+        Schema::dropIfExists('directors');
+    }
+};
