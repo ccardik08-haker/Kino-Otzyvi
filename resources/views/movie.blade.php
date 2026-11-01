@@ -16,7 +16,10 @@
         ? $movie->reviews->firstWhere('user_id', $user->id)
         : null;
 
+    $isAdmin = $user?->role?->name === 'Администратор';
+
     $canRate = $user
+        && !$isAdmin
         && !$user->is_banned
         && !$isAuthor
         && !$userReview;
@@ -161,7 +164,7 @@
             <a class="movie-review-link" href="#movie-reviews">
                 Отзывы: {{ $reviewCount }}
             </a>
-
+        @if(!$isAdmin)
             <form
                 method="POST"
                 action="/movie/{{ $movie->id }}/review"
@@ -212,6 +215,7 @@
                     </button>
                 @endif
             </form>
+            @endif
 
             @guest
                 <p class="movie-rating-note">

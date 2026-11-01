@@ -10,6 +10,12 @@ class ReviewController extends Controller
 {
     public function store(Request $request, $movie_id)
 {
+    abort_if(
+        auth()->user()?->role?->name === 'Администратор',
+        403,
+        'Администраторы не могут оценивать фильмы.'
+    );
+    
     $request->validate(['rating' => 'required|integer|min:1|max:10']);
 
     $user = auth()->user();

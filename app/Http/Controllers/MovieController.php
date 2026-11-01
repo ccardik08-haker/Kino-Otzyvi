@@ -300,43 +300,56 @@ class MovieController extends Controller
         return view('my-movies', compact('movies'));
     }
 
-    public function edit($id)
-{
-    $movie = Movie::with([
-        'reviews.user',
-        'castMembers',
-        'directorMembers',
-    ])->findOrFail($id);
+    public function edit($id) {
+        $movie = Movie::with([
+            'reviews.user',
+            'castMembers',
+            'directorMembers',
+        ])->findOrFail($id);
 
-    if (
-        (int) $movie->moderator_id !== (int) auth()->id()
-        && auth()->user()->role->name !== 'Администратор'
-    ) {
-        abort(
-            403,
-            'Вы можете редактировать только свои фильмы.'
+        $isAdmin = auth()->user()->role?->name === 'Администратор';
+
+        $isOwner = (int) $movie->moderator_id === (int) auth()->id();
+
+        if (!$isAdmin && !$isOwner) {
+            abort(
+                403,
+                'Вы можете редактировать только свои фильмы.'
+            );
+        }
+
+        $categories = Category::all();
+
+        $actorOptions = Actor::orderBy('name')->get();
+
+        $directorOptions = Director::orderBy('name')->get();
+
+        return view(
+            'movie-edit',
+            compact(
+                'movie',
+                'categories',
+                'actorOptions',
+                'directorOptions'
+            )
         );
     }
 
-    $categories = Category::all();
-
-    $actorOptions = Actor::orderBy('name')->get();
-    $directorOptions = Director::orderBy('name')->get();
-
-    return view(
-        'movie-edit',
-        compact(
-            'movie',
-            'categories',
-            'actorOptions',
-            'directorOptions'
-        )
-    );
-}
-
     public function update(Request $request, $id)
     {
+
         $movie = Movie::findOrFail($id);
+
+        $isAdmin = auth()->user()->role?->name === 'Администратор';
+
+        $isOwner = (int) $movie->moderator_id === (int) auth()->id();
+
+        if (!$isAdmin && !$isOwner) {
+            abort(
+                403,
+                'Вы можете редактировать только свои фильмы.'
+            );
+        }
 
         if ($movie->moderator_id !== auth()->id() && auth()->user()->role->name !== 'Администратор') {
             abort(403);
