@@ -37,10 +37,14 @@
     @forelse($movies as $movie)
         <div class="movie-card" style="position: relative;">
             @if($movie->poster_url)
-                <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" class="card-poster">
-            @else
-                <div class="card-poster" style="background: #333; display:flex; align-items: center; justify-content: center; color:#666;">Нет постера</div>
-            @endif
+    @if(str_starts_with($movie->poster_url, 'http'))
+        <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" class="card-poster">
+    @else
+        <img src="/media/posters/{{ $movie->poster_url }}" alt="{{ $movie->title }}" class="card-poster">
+    @endif
+@else
+    <div class="card-poster" style="background: #333; display:flex; align-items:center; justify-content:center; color:#666;">Нет постера</div>
+@endif
             <h3>{{ $movie->title }}</h3>
             <p class="meta">{{ $movie->year }} | {{ $movie->category->name }}</p>
             <p class="rating">⭐ {{ $movie->average_rating }} / 10</p>

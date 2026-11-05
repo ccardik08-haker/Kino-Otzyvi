@@ -49,3 +49,18 @@ Route::middleware(['auth', 'role:Модератор,Администратор',
 });
 
 Route::get('/filmography/{type}/{id}',[FilmographyController::class, 'show'])->where('type', 'actors|directors|authors')->whereNumber('id')->name('filmography');
+
+Route::get('/media/{folder}/{filename}', function ($folder, $filename) {$path = base_path('media/' . $folder . '/' . $filename);
+    if (!file_exists($path)) {
+        abort(404);
+    }
+
+    if ($folder === 'posters') {
+        $url = trim(file_get_contents($path));
+        return redirect($url);
+    }
+
+    return response()->file($path, [
+        'Content-Type' => 'application/json',
+    ]);
+});

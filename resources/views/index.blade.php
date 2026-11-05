@@ -193,16 +193,13 @@
                     class="film-card-main-link"
                 >
                     @if($movie->poster_url)
-                        <img
-                            src="{{ $movie->poster_url }}"
-                            alt="{{ $movie->title }}"
-                            class="card-poster"
-                            loading="lazy"
-                        >
+                        @if(str_starts_with($movie->poster_url, 'http'))
+                            <img src="{{ $movie->poster_url }}" alt="{{ $movie->title }}" class="card-poster">
+                        @else
+                            <img src="/media/posters/{{ $movie->poster_url }}" alt="{{ $movie->title }}" class="card-poster">
+                        @endif
                     @else
-                        <div class="card-poster card-poster-empty">
-                            Нет постера
-                        </div>
+                        <div class="card-poster" style="background: #333; display:flex; align-items:center; justify-content:center; color:#666;">Нет постера</div>
                     @endif
 
                     <h3>{{ $movie->title }}</h3>
